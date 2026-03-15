@@ -22,10 +22,12 @@ export default function EditorialCalendar() {
       const { data } = await supabase.from("analyses").select("*").eq("id", analysisId).single();
       if (data) {
         setAnalysisData(data);
-        const rec = data.ai_recommended_frequency || data.full_report_json?.editorial_calendar_brief?.recommended_frequency_per_week || 3;
+        const reportJson = data.full_report_json as any;
+        const calendarJson = data.editorial_calendar_json as any;
+        const rec = data.ai_recommended_frequency || reportJson?.editorial_calendar_brief?.recommended_frequency_per_week || 3;
         setFrequency(rec);
-        if (data.editorial_calendar_json?.posts) {
-          setCalendar(data.editorial_calendar_json.posts);
+        if (calendarJson?.posts) {
+          setCalendar(calendarJson.posts);
           setPhase("calendar");
         }
       }

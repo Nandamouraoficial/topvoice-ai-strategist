@@ -33,8 +33,9 @@ export default function ActionItems() {
 
       if (analysisId) {
         const { data: analysis } = await supabase.from("analyses").select("action_plan_json, full_report_json").eq("id", analysisId).single();
-        if (analysis?.action_plan_json || analysis?.full_report_json?.action_plan) {
-          const plan = analysis.action_plan_json || analysis.full_report_json.action_plan;
+        const reportJson = analysis?.full_report_json as any;
+        if (analysis?.action_plan_json || reportJson?.action_plan) {
+          const plan = (analysis.action_plan_json || reportJson.action_plan) as any;
           const items: ActionItem[] = [];
           const phases = [
             { data: plan.phase_30_days, phase: 30 },
