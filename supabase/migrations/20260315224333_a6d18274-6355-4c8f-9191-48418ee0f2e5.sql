@@ -1,0 +1,9 @@
+CREATE POLICY "Allow all operations on access_tokens" ON public.access_tokens FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations on users" ON public.users FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations on questionnaire_responses" ON public.questionnaire_responses FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations on linkedin_raw_data" ON public.linkedin_raw_data FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations on analyses" ON public.analyses FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations on mentee_gamification" ON public.mentee_gamification FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations on completed_actions" ON public.completed_actions FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations on report_shares" ON public.report_shares FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all operations on admin_notes" ON public.admin_notes FOR ALL TO anon USING (true) WITH CHECK (true);
