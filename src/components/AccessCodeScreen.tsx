@@ -1,17 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { setTokenData } from "@/lib/app-store";
 
 interface AccessCodeScreenProps {
   onValidCode: (code: string) => void;
 }
-
-// Mock validation - accepts any TVA-XXXX format
-const validateCode = (code: string): "valid" | "invalid" | "used" => {
-  if (code === "TVA-USED000000") return "used";
-  if (/^TVA-[A-Z0-9]{12}$/i.test(code)) return "valid";
-  if (/^TVA-[A-Z0-9]{6,}$/i.test(code)) return "valid"; // lenient for testing
-  return "invalid";
-};
 
 export default function AccessCodeScreen({ onValidCode }: AccessCodeScreenProps) {
   const [code, setCode] = useState("");
@@ -23,35 +17,81 @@ export default function AccessCodeScreen({ onValidCode }: AccessCodeScreenProps)
     setError("");
     setValidating(true);
 
-    // Simulate API delay
-    await new Promise((r) => setTimeout(r, 800));
+    try {
+      const inputCode = code.trim().toUpperCase();
+      
+      const { data: token, error: dbError } = await supabase
+        .from("access_tokens")
+        .select("*")
+        .eq("code", inputCode)
+        .maybeSingle();
 
-    const result = validateCode(code.trim().toUpperCase());
-
-    if (result === "valid") {
-      onValidCode(code.trim().toUpperCase());
-    } else {
-      setShaking(true);
-      setTimeout(() => setShaking(false), 500);
-      if (result === "used") {
-        setError("Este código já foi utilizado. Entre em contato com Fernanda para um novo acesso.");
-      } else {
-        setError("Código inválido. Verifique e tente novamente.");
+      if (dbError) {
+        console.error("DB error:", dbError);
+        setError("Erro ao verificar código. Tente novamente.");
+        triggerShake();
+        setValidating(false);
+        return;
       }
+
+      if (!token) {
+        setError("Código inválido. Verifique e tente novamente.");
+        triggerShake();
+        setValidating(false);
+        return;
+      }
+
+      if (token.status === "expired") {
+        setError("Este código foi expirado. Entre em contato com a Fernanda.");
+        triggerShake();
+        setValidating(false);
+        return;
+      }
+
+      if (token.status === "analysis_used" && (token.bonus_analyses_remaining || 0) <= 0) {
+        setError("Você já utilizou sua análise. Para uma nova análise, fale com a Fernanda.");
+        triggerShake();
+        setValidating(false);
+        return;
+      }
+
+      // Valid token — activate it
+      if (token.status === "created") {
+        await supabase
+          .from("access_tokens")
+          .update({ status: "activated", activated_at: new Date().toISOString() })
+          .eq("id", token.id);
+      }
+
+      // Save token data to localStorage
+      setTokenData({
+        id: token.id,
+        code: token.code,
+        mentee_name: token.mentee_name || "",
+      });
+
+      onValidCode(inputCode);
+    } catch (err) {
+      console.error("Validation error:", err);
+      setError("Erro inesperado. Tente novamente.");
+      triggerShake();
     }
 
     setValidating(false);
   };
 
+  const triggerShake = () => {
+    setShaking(true);
+    setTimeout(() => setShaking(false), 500);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-navy-950 relative overflow-hidden">
-      {/* Floating orbs */}
       <div className="floating-orb w-96 h-96 bg-gold-500 top-[-10%] left-[-10%]" />
       <div className="floating-orb w-72 h-72 bg-blue-500 bottom-[-5%] right-[-5%]" />
       <div className="floating-orb w-48 h-48 bg-gold-400 top-[40%] right-[20%]" />
 
       <div className={`glass-card rounded-2xl p-10 max-w-md w-full mx-4 animate-scale-in ${shaking ? "animate-shake" : ""}`}>
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-4">
             <div className="w-10 h-10 rounded-xl gold-gradient flex items-center justify-center text-lg font-bold text-navy-950">
@@ -69,7 +109,6 @@ export default function AccessCodeScreen({ onValidCode }: AccessCodeScreenProps)
           </p>
         </div>
 
-        {/* Code input */}
         <div className="mb-6">
           <input
             type="text"
@@ -88,13 +127,22 @@ export default function AccessCodeScreen({ onValidCode }: AccessCodeScreenProps)
             `}
           />
           {error && (
-            <p className="text-destructive text-sm mt-3 text-center animate-fade-in">
-              {error}
-            </p>
+            <div className="mt-3 text-center animate-fade-in">
+              <p className="text-destructive text-sm">{error}</p>
+              {error.includes("fale com a Fernanda") && (
+                <a
+                  href="https://wa.me/5511999999999"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-2 text-sm text-gold-500 hover:underline"
+                >
+                  💬 Falar com Fernanda no WhatsApp
+                </a>
+              )}
+            </div>
           )}
         </div>
 
-        {/* CTA */}
         <Button
           onClick={handleSubmit}
           disabled={!code.trim() || validating}
@@ -111,7 +159,6 @@ export default function AccessCodeScreen({ onValidCode }: AccessCodeScreenProps)
           )}
         </Button>
 
-        {/* Help link */}
         <div className="text-center mt-6">
           <a
             href="https://wa.me/5511999999999"
