@@ -7,13 +7,15 @@ import AnalysisLoadingScreen from "@/components/AnalysisLoadingScreen";
 import AnalysisReport from "@/components/report/AnalysisReport";
 import MenteeDashboard from "@/components/dashboard/MenteeDashboard";
 import ActionItems from "@/components/dashboard/ActionItems";
+import EditorialCalendar from "@/components/dashboard/EditorialCalendar";
+import BadgesScreen from "@/components/dashboard/BadgesScreen";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { FlowState, getFlowState, setFlowState, setToken, resetApp } from "@/lib/app-store";
+import { FlowState, getFlowState, setFlowState, setToken, resetApp, getTokenData } from "@/lib/app-store";
 import { QuestionnaireData } from "@/lib/questionnaire-store";
 
 export default function Index() {
   const [flow, setFlow] = useState<FlowState>(getFlowState);
-  const [firstName, setFirstName] = useState("");
+  const [firstName, setFirstName] = useState(() => getTokenData()?.mentee_name?.split(" ")[0] || "");
   const [dashTab, setDashTab] = useState("dashboard");
 
   const goTo = useCallback((state: FlowState) => {
@@ -23,6 +25,8 @@ export default function Index() {
 
   const handleValidCode = (code: string) => {
     setToken(code);
+    const td = getTokenData();
+    if (td?.mentee_name) setFirstName(td.mentee_name.split(" ")[0]);
     goTo("welcome");
   };
 
@@ -41,27 +45,14 @@ export default function Index() {
     goTo("access_code");
   };
 
-  // Dashboard view (after report)
   if (flow === "dashboard") {
     return (
       <DashboardLayout activeTab={dashTab} onTabChange={setDashTab} onLogout={handleLogout}>
         {dashTab === "dashboard" && <MenteeDashboard />}
         {dashTab === "report" && <AnalysisReport onViewActions={() => setDashTab("actions")} />}
         {dashTab === "actions" && <ActionItems />}
-        {dashTab === "calendar" && (
-          <div className="text-center py-20">
-            <span className="text-5xl mb-4 block">📅</span>
-            <h2 className="text-xl font-bold text-foreground mb-2">Calendário Editorial</h2>
-            <p className="text-muted-foreground">Complete sua análise para gerar o calendário</p>
-          </div>
-        )}
-        {dashTab === "badges" && (
-          <div className="text-center py-20">
-            <span className="text-5xl mb-4 block">🏆</span>
-            <h2 className="text-xl font-bold text-foreground mb-2">Conquistas</h2>
-            <p className="text-muted-foreground">Continue suas ações para desbloquear conquistas</p>
-          </div>
-        )}
+        {dashTab === "calendar" && <EditorialCalendar />}
+        {dashTab === "badges" && <BadgesScreen />}
       </DashboardLayout>
     );
   }
